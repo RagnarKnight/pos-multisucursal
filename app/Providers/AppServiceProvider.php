@@ -2,22 +2,29 @@
 
 namespace App\Providers;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-        //
-    }
+    public function register(): void {}
 
     public function boot(): void
     {
-        // Gate para middleware can:admin en las rutas de productos
-        Gate::define('admin', function (User $user) {
-            return $user->esAdmin();
-        });
+        // ── Gates de rol ──────────────────────────────────────────────
+        Gate::define('admin',      fn($u) => in_array($u->rol, ['admin', 'superadmin']));
+        Gate::define('superadmin', fn($u) => $u->rol === 'superadmin');
+
+        // Gestión de tiendas: superadmin + flag en .env habilitado
+        // ALLOW_TIENDA_MANAGEMENT=true → el cliente puede crear/eliminar tiendas
+        // ALLOW_TIENDA_MANAGEMENT=false (default) → solo vos creás tiendas via seeder/tinker
+        Gate::define('gestionar-tiendas', fn($u) =>
+            $u->rol === 'superadmin' && config('app.allow_tienda_management', false)
+        );
+
+        // Editar configuración de UNA tienda: admin de esa tienda o superadmin
+        Gate::define('configurar-tienda', fn($u) =>
+            in_array($u->rol, ['admin', 'superadmin'])
+        );
     }
 }

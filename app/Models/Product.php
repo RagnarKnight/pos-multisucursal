@@ -11,42 +11,48 @@ class Product extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'nombre',
-        'descripcion',
-        'precio_costo',
-        'precio_venta',
-        'stock',
-        'image_path',
-        'activo',
+        'tienda_id', 'nombre', 'descripcion',
+        'precio_costo', 'precio_venta', 'stock', 'image_path', 'activo',
     ];
 
     protected function casts(): array
     {
         return [
-            'precio_costo'  => 'decimal:2',
-            'precio_venta'  => 'decimal:2',
-            'activo'        => 'boolean',
+            'precio_costo' => 'decimal:2',
+            'precio_venta' => 'decimal:2',
+            'activo'       => 'boolean',
         ];
     }
 
-    // ─── Relaciones ───────────────────────────────────────────────
-    public function orderItems()
+    // ─── Scope global: solo productos de la tienda activa ─────────
+    protected static function booted(): void
     {
-        return $this->hasMany(OrderItem::class);
+        static::addGlobalScope('tienda', function ($query) {
+            if (auth()->check()) {
+                $tid = auth()->user()->tiendaActivaId();
+                if ($tid) $query->where('products.tienda_id', $tid);
+            }
+        });
+
+        static::creating(function ($model) {
+            if (auth()->check() && !$model->tienda_id) {
+                $model->tienda_id = auth()->user()->tiendaActivaId();
+            }
+        });
     }
 
-    // ─── Scopes útiles ────────────────────────────────────────────
-    // Productos disponibles para vender en el POS
+    // ─── Relaciones ───────────────────────────────────────────────
+    public function tienda()     { return $this->belongsTo(Tienda::class); }
+    public function orderItems() { return $this->hasMany(OrderItem::class); }
+
+    // ─── Scopes ───────────────────────────────────────────────────
     public function scopeActivos($query)
     {
         return $query->where('activo', true)->where('stock', '>', 0);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────
-    public function tieneStock(): bool
-    {
-        return $this->stock > 0;
-    }
+    public function tieneStock(): bool { return $this->stock > 0; }
 
     public function margenGanancia(): float
     {

@@ -11,7 +11,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
-    <title>@yield('title', 'Mi Negocio')</title>
+    <title>@yield('title', auth()->check() && auth()->user()->tiendaActiva() ? auth()->user()->tiendaActiva()->nombre : 'Mi Negocio')</title>
 
     {{-- Bootstrap 5 --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -281,11 +281,44 @@
         <i class="bi bi-list"></i>
     </button>
 
-    <a href="{{ route('pos.index') }}" class="brand">
-        POS <span>{{ config('app.name') }}</span>
+    @php $tiendaActiva = auth()->user()->tiendaActiva(); @endphp
+
+    {{-- Marca dinámica --}}
+    <a href="{{ route('pos.index') }}" class="brand" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;">
+        @if($tiendaActiva?->logoUrl())
+            <img src="{{ $tiendaActiva->logoUrl() }}" alt="{{ $tiendaActiva->nombre }}"
+                 style="height:30px;max-width:110px;object-fit:contain;border-radius:4px;">
+        @else
+            <span style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;color:var(--c-text);">
+                {{ $tiendaActiva?->nombre ?? 'Mi Negocio' }}
+            </span>
+            @if($tiendaActiva?->ciudad)
+                <span style="font-size:0.75rem;color:var(--c-muted);font-weight:400;">
+                    {{ $tiendaActiva->ciudad }}
+                </span>
+            @endif
+        @endif
     </a>
 
     <div class="d-flex align-items-center gap-2">
+
+        {{-- Selector de tienda para superadmin --}}
+        @if(auth()->user()->esSuperAdmin())
+        <form method="POST" action="{{ route('tienda.switch') }}" style="margin:0;">
+            @csrf
+            <select name="tienda_id" onchange="this.form.submit()"
+                    style="background:var(--c-border);border:1px solid var(--c-border);color:var(--c-text);
+                           border-radius:8px;padding:0.3rem 0.5rem;font-size:0.8rem;outline:none;cursor:pointer;
+                           max-width:140px;">
+                @foreach(\App\Models\Tienda::where('activa',true)->get() as $t)
+                    <option value="{{ $t->id }}" {{ $tiendaActiva?->id == $t->id ? 'selected' : '' }}>
+                        🏪 {{ $t->nombre }}
+                    </option>
+                @endforeach
+            </select>
+        </form>
+        @endif
+
         <div class="nav-user-badge d-none d-sm-block">
             <strong>{{ auth()->user()->name }}</strong><br>
             {{ ucfirst(auth()->user()->rol) }}
@@ -302,7 +335,12 @@
 {{-- ── Sidebar Offcanvas ────────────────────────────────────── --}}
 <div class="offcanvas offcanvas-start sidebar-offcanvas" tabindex="-1" id="sidebar">
     <div class="offcanvas-header">
-        <span class="sidebar-brand">POS <span>{{ config('app.name') }}</span></span>
+        <span class="sidebar-brand">
+            {{ $tiendaActiva?->nombre ?? 'Mi Negocio' }}
+            @if($tiendaActiva?->ciudad)
+                <span style="font-size:0.8em;opacity:0.6;"> — {{ $tiendaActiva->ciudad }}</span>
+            @endif
+        </span>
         <button class="btn-close-sidebar" data-bs-dismiss="offcanvas">
             <i class="bi bi-x-lg"></i>
         </button>
@@ -310,6 +348,14 @@
 
     <div class="offcanvas-body p-0 d-flex flex-column">
         <nav class="sidebar-nav flex-grow-1">
+
+            @if(auth()->user()->esSuperAdmin())
+            <div class="sidebar-label">Sistema</div>
+            <a href="{{ route('dashboard') }}"
+               class="sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            @endif
 
             <div class="sidebar-label">Venta</div>
             <a href="{{ route('pos.index') }}"
@@ -346,7 +392,22 @@
                class="sidebar-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
                 <i class="bi bi-people"></i> Usuarios
             </a>
+            {{-- Configuración de la tienda --}}
+            <a href="{{ route('tiendas.edit', $tiendaActiva) }}"
+               class="sidebar-link {{ request()->routeIs('tiendas.edit') ? 'active' : '' }}">
+                <i class="bi bi-gear"></i> Mi Tienda
+            </a>
             @endif
+
+            {{-- Solo superadmin: gestión de tiendas si el flag está activo --}}
+            @can('gestionar-tiendas')
+            <hr class="sidebar-divider">
+            <div class="sidebar-label">Super Admin</div>
+            <a href="{{ route('tiendas.index') }}"
+               class="sidebar-link {{ request()->routeIs('tiendas.index') ? 'active' : '' }}">
+                <i class="bi bi-shop"></i> Tiendas
+            </a>
+            @endcan
 
         </nav>
 
@@ -355,6 +416,9 @@
                 Conectado como<br>
                 <strong style="color:var(--c-text);">{{ auth()->user()->name }}</strong>
                 — {{ ucfirst(auth()->user()->rol) }}
+                @if($tiendaActiva)
+                    <br><span style="color:var(--c-accent);">🏪 {{ $tiendaActiva->nombre }}</span>
+                @endif
             </div>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf

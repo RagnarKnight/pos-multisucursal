@@ -13,10 +13,8 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->integer('cantidad');
-            // precio_unitario se guarda al momento de la venta (precio histórico)
-            // Si cambia el precio del producto, el historial no se altera
             $table->decimal('precio_unitario', 10, 2);
-            $table->decimal('subtotal', 10, 2); // cantidad * precio_unitario
+            $table->decimal('subtotal', 10, 2);
             $table->timestamps();
         });
     }

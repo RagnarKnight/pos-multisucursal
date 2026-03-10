@@ -14,7 +14,12 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('rol', ['admin', 'empleado'])->default('empleado');
+            // superadmin: dueño del software (vos) — ve todo
+            // admin:      encargado de una tienda
+            // empleado:   solo vende en su tienda
+            $table->enum('rol', ['superadmin', 'admin', 'empleado'])->default('empleado');
+            // null solo para superadmin (no pertenece a una tienda)
+            $table->foreignId('tienda_id')->nullable()->constrained('tiendas')->nullOnDelete();
             $table->boolean('activo')->default(true);
             $table->rememberToken();
             $table->timestamps();

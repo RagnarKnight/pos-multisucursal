@@ -4,69 +4,85 @@ namespace Database\Seeders;
 
 use App\Models\Customer;
 use App\Models\Product;
+use App\Models\Tienda;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // ── Usuarios ──────────────────────────────────────────────
+        // ── 1. SUPERADMIN (vos — sin tienda_id) ──────────────────────
         User::create([
-            'name'     => 'Admin',
-            'email'    => 'admin@santafe.local',
-            'password' => bcrypt('admin1234'),
-            'rol'      => 'admin',
+            'name'      => 'Super Admin',
+            'email'     => 'super@sistema.local',
+            'password'  => Hash::make('super1234'),
+            'rol'       => 'superadmin',
+            'tienda_id' => null,
+        ]);
+
+        // ── 2. TIENDA INICIAL ─────────────────────────────────────────
+        // El cliente cambia estos datos desde Configuración → Mi Tienda
+        $tienda = Tienda::create([
+            'nombre'    => 'Mi Negocio',
+            'ciudad'    => 'Santa Fe',
+            'direccion' => null,
+            'telefono'  => null,
+            'activa'    => true,
+        ]);
+
+        // ── 3. USUARIOS DE LA TIENDA ──────────────────────────────────
+        User::create([
+            'name'      => 'Administrador',
+            'email'     => 'admin@minegocio.local',
+            'password'  => Hash::make('admin1234'),
+            'rol'       => 'admin',
+            'tienda_id' => $tienda->id,
         ]);
 
         User::create([
-            'name'     => 'Empleado',
-            'email'    => 'empleado@santafe.local',
-            'password' => bcrypt('empleado1234'),
-            'rol'      => 'empleado',
+            'name'      => 'Empleado',
+            'email'     => 'empleado@minegocio.local',
+            'password'  => Hash::make('empleado1234'),
+            'rol'       => 'empleado',
+            'tienda_id' => $tienda->id,
         ]);
 
-        // ── Cliente genérico para fiados sin identificar ───────────
-        // ID=1 reservado — el POS lo usa automáticamente
+        // ── 4. CLIENTE GENÉRICO (ID reservado por tienda) ─────────────
         Customer::create([
+            'tienda_id'    => $tienda->id,
             'nombre'       => 'Cuenta Genérica',
-            'telefono'     => null,
             'saldo_deudor' => 0,
-            'notas'        => 'Cliente por defecto para ventas fiadas sin cliente identificado. Editá la orden luego para asignar el cliente correcto.',
+            'notas'        => 'Cliente genérico para fiados sin nombre. No eliminar.',
         ]);
 
-        // ── Productos típicos de kiosco/verdulería ─────────────────
+        // ── 5. PRODUCTOS DE EJEMPLO ───────────────────────────────────
         $productos = [
-            ['nombre' => 'Coca Cola 2.25L',     'precio_costo' => 1200, 'precio_venta' => 1800, 'stock' => 24],
-            ['nombre' => 'Pepsi 2.25L',          'precio_costo' => 1100, 'precio_venta' => 1700, 'stock' => 12],
-            ['nombre' => 'Agua Mineral 500ml',   'precio_costo' =>  350, 'precio_venta' =>  600, 'stock' => 48],
-            ['nombre' => 'Yerba Mate 1kg',       'precio_costo' => 2500, 'precio_venta' => 3500, 'stock' => 10],
-            ['nombre' => 'Alfajor Havanna',      'precio_costo' =>  800, 'precio_venta' => 1200, 'stock' => 30],
-            ['nombre' => 'Alfajor Milka',        'precio_costo' =>  600, 'precio_venta' =>  900, 'stock' => 30],
-            ['nombre' => 'Cigarrillos Marlboro', 'precio_costo' => 1800, 'precio_venta' => 2200, 'stock' => 20],
-            ['nombre' => 'Pan Lactal Bimbo',     'precio_costo' =>  900, 'precio_venta' => 1300, 'stock' =>  8],
-            ['nombre' => 'Leche Entera 1L',      'precio_costo' =>  700, 'precio_venta' => 1000, 'stock' => 15],
-            ['nombre' => 'Tomate x Kg',          'precio_costo' =>  400, 'precio_venta' =>  700, 'stock' => 10],
-            ['nombre' => 'Papa x Kg',            'precio_costo' =>  350, 'precio_venta' =>  600, 'stock' => 20],
-            ['nombre' => 'Cebolla x Kg',         'precio_costo' =>  300, 'precio_venta' =>  500, 'stock' => 15],
-            ['nombre' => 'Fideos Tallarín 500g', 'precio_costo' =>  600, 'precio_venta' =>  950, 'stock' => 25],
-            ['nombre' => 'Aceite Girasol 900ml', 'precio_costo' => 1600, 'precio_venta' => 2200, 'stock' => 10],
-            ['nombre' => 'Azúcar 1kg',           'precio_costo' =>  700, 'precio_venta' => 1100, 'stock' => 12],
+            ['nombre' => 'Coca Cola 500ml',     'precio_costo' => 800,  'precio_venta' => 1200, 'stock' => 24],
+            ['nombre' => 'Agua mineral 500ml',  'precio_costo' => 300,  'precio_venta' => 500,  'stock' => 30],
+            ['nombre' => 'Sprite 500ml',        'precio_costo' => 800,  'precio_venta' => 1200, 'stock' => 18],
+            ['nombre' => 'Cerveza Quilmes 1L',  'precio_costo' => 1800, 'precio_venta' => 2500, 'stock' => 12],
+            ['nombre' => 'Alfajor Havanna',     'precio_costo' => 900,  'precio_venta' => 1400, 'stock' => 20],
+            ['nombre' => 'Papas fritas 100g',   'precio_costo' => 500,  'precio_venta' => 850,  'stock' => 15],
+            ['nombre' => 'Chicles Beldent',     'precio_costo' => 200,  'precio_venta' => 400,  'stock' => 40],
+            ['nombre' => 'Cigarrillos Marlboro','precio_costo' => 2500, 'precio_venta' => 3200, 'stock' => 10],
+            ['nombre' => 'Tomate x kg',         'precio_costo' => 600,  'precio_venta' => 900,  'stock' => 5],
+            ['nombre' => 'Papa x kg',           'precio_costo' => 400,  'precio_venta' => 650,  'stock' => 8],
+            ['nombre' => 'Cebolla x kg',        'precio_costo' => 350,  'precio_venta' => 600,  'stock' => 7],
+            ['nombre' => 'Banana x kg',         'precio_costo' => 500,  'precio_venta' => 800,  'stock' => 6],
+            ['nombre' => 'Leche La Serenísima', 'precio_costo' => 1100, 'precio_venta' => 1600, 'stock' => 20],
+            ['nombre' => 'Pan lactal Bimbo',    'precio_costo' => 900,  'precio_venta' => 1400, 'stock' => 8],
+            ['nombre' => 'Yogur Ser 190g',      'precio_costo' => 600,  'precio_venta' => 950,  'stock' => 3],
         ];
 
         foreach ($productos as $p) {
-            Product::create(array_merge($p, ['activo' => true]));
+            Product::create(array_merge($p, ['tienda_id' => $tienda->id, 'activo' => true]));
         }
 
-        // ── Clientes de ejemplo (además de la Cuenta Genérica) ─────
-        $clientes = [
-            ['nombre' => 'María González',  'telefono' => '3425-123456', 'saldo_deudor' => 4500],
-            ['nombre' => 'Roberto Díaz',    'telefono' => '3425-654321', 'saldo_deudor' => 1200],
-            ['nombre' => 'Lucía Fernández', 'telefono' => null,          'saldo_deudor' =>    0],
-        ];
-
-        foreach ($clientes as $c) {
-            Customer::create($c);
-        }
+        // ── 6. CLIENTES DE EJEMPLO ────────────────────────────────────
+        Customer::create(['tienda_id' => $tienda->id, 'nombre' => 'Juan Pérez',    'telefono' => '3424001234', 'saldo_deudor' => 3500]);
+        Customer::create(['tienda_id' => $tienda->id, 'nombre' => 'María González','telefono' => '3424005678', 'saldo_deudor' => 1200]);
+        Customer::create(['tienda_id' => $tienda->id, 'nombre' => 'Carlos Rodríguez', 'saldo_deudor' => 0]);
     }
 }

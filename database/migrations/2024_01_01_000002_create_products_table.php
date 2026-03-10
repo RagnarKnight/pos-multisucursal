@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tienda_id')->constrained('tiendas')->cascadeOnDelete();
             $table->string('nombre');
             $table->text('descripcion')->nullable();
             $table->decimal('precio_costo', 10, 2)->default(0);
@@ -18,7 +19,7 @@ return new class extends Migration
             $table->string('image_path')->nullable();
             $table->boolean('activo')->default(true);
             $table->timestamps();
-            $table->softDeletes(); // Para no borrar productos con historial
+            $table->softDeletes();
         });
     }
 

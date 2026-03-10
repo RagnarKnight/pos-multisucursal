@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tienda_id')->constrained('tiendas')->cascadeOnDelete();
             $table->string('nombre');
             $table->string('telefono')->nullable();
-            // saldo_deudor: positivo = debe plata, negativo = tiene saldo a favor
             $table->decimal('saldo_deudor', 10, 2)->default(0);
             $table->text('notas')->nullable();
             $table->timestamps();

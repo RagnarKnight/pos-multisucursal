@@ -11,17 +11,10 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'rol',
-        'activo',
+        'name', 'email', 'password', 'rol', 'tienda_id', 'activo',
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
@@ -33,19 +26,26 @@ class User extends Authenticatable
     }
 
     // ─── Relaciones ───────────────────────────────────────────────
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
+    public function tienda() { return $this->belongsTo(Tienda::class); }
+    public function orders() { return $this->hasMany(Order::class); }
 
     // ─── Helpers de rol ───────────────────────────────────────────
-    public function esAdmin(): bool
+    public function esSuperAdmin(): bool { return $this->rol === 'superadmin'; }
+    public function esAdmin(): bool      { return in_array($this->rol, ['admin', 'superadmin']); }
+    public function esEmpleado(): bool   { return $this->rol === 'empleado'; }
+
+    // La tienda activa: superadmin puede cambiar via sesión
+    public function tiendaActiva(): ?Tienda
     {
-        return $this->rol === 'admin';
+        if ($this->esSuperAdmin()) {
+            $id = session('tienda_activa_id');
+            return $id ? Tienda::find($id) : Tienda::first();
+        }
+        return $this->tienda;
     }
 
-    public function esEmpleado(): bool
+    public function tiendaActivaId(): ?int
     {
-        return $this->rol === 'empleado';
+        return $this->tiendaActiva()?->id;
     }
 }

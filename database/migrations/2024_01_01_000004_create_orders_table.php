@@ -10,12 +10,11 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('tienda_id')->constrained('tiendas')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
-            // nullable: venta anónima (sin cuenta corriente)
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             $table->decimal('total', 10, 2);
             $table->enum('metodo_pago', ['efectivo', 'transferencia', 'fiado']);
-            // Para el comprobante de transferencia (foto del QR de Mercado Pago)
             $table->string('comprobante_path')->nullable();
             $table->text('notas')->nullable();
             $table->timestamps();
