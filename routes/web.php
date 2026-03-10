@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -21,9 +20,7 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
 
     // ── Dashboard superadmin ──────────────────────────────────────
-    Route::get('/dashboard', [DashboardController::class, 'index'])
-         ->name('dashboard')
-         ->middleware('can:superadmin');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('can:superadmin');
 
     // ── POS ───────────────────────────────────────────────────────
     Route::get('/pos',        [OrderController::class, 'create'])->name('pos.index');
