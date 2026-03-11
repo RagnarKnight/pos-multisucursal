@@ -193,6 +193,55 @@
     }
     .btn-limpiar:hover { border-color:#e84040; color:#e84040; }
 
+    /* ── Foto de comprobante de transferencia ─────────────── */
+    .transfer-foto-wrap {
+        display: none;
+        margin-top: 0.6rem;
+        animation: fadeIn 0.2s ease;
+    }
+    .transfer-foto-wrap.show { display: block; }
+
+    .foto-drop-zone {
+        border: 2px dashed rgba(52,152,219,0.5);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+        position: relative;
+        background: rgba(52,152,219,0.04);
+    }
+    .foto-drop-zone:hover,
+    .foto-drop-zone.drag-over { border-color: #3498db; background: rgba(52,152,219,0.1); }
+
+    .foto-preview-img {
+        width: 100%; max-height: 160px;
+        object-fit: contain; border-radius: 8px;
+        display: none; margin-bottom: 0.5rem;
+    }
+    .foto-preview-img.show { display: block; }
+
+    .foto-placeholder { color: var(--c-muted); font-size: 0.82rem; }
+    .foto-placeholder i { font-size: 1.8rem; display: block; margin-bottom: 0.3rem; color: #3498db; }
+
+    .foto-label {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.07em; color: #3498db; margin-bottom: 0.35rem; display: block;
+    }
+    .foto-remove {
+        position: absolute; top: 0.4rem; right: 0.4rem;
+        background: rgba(232,64,64,0.15); border: none; border-radius: 50%;
+        width: 24px; height: 24px; cursor: pointer; color: #e84040;
+        font-size: 0.8rem; display: none; align-items: center; justify-content: center;
+        transition: background 0.15s;
+    }
+    .foto-remove.show { display: flex; }
+    .foto-remove:hover { background: rgba(232,64,64,0.3); }
+
+    .foto-opcional {
+        font-size: 0.68rem; color: var(--c-muted); margin-top: 0.3rem; text-align: center;
+    }
+
     /* ── Formulario cliente nuevo inline ────────────────── */
     .nuevo-cliente-toggle {
         background: none; border: none; color: var(--c-accent);
@@ -314,6 +363,29 @@
                 <button class="pay-btn fiado" onclick="seleccionarPago('fiado')">
                     <i class="bi bi-book"></i> Fiado
                 </button>
+            </div>
+
+            {{-- Foto de comprobante (solo transferencia) --}}
+            <div class="transfer-foto-wrap" id="transferFotoWrap">
+                <span class="foto-label"><i class="bi bi-camera"></i> Foto del comprobante</span>
+                <div class="foto-drop-zone" id="fotoDropZone"
+                     onclick="document.getElementById('fotoInput').click()"
+                     ondragover="event.preventDefault();this.classList.add('drag-over')"
+                     ondragleave="this.classList.remove('drag-over')"
+                     ondrop="handleFotoDrop(event)">
+                    <button type="button" class="foto-remove" id="fotoRemove" onclick="removeFoto(event)">
+                        <i class="bi bi-x"></i>
+                    </button>
+                    <img id="fotoPreview" class="foto-preview-img" src="" alt="Comprobante">
+                    <div class="foto-placeholder" id="fotoPlaceholder">
+                        <i class="bi bi-camera"></i>
+                        Tocá para sacar foto o elegir imagen
+                    </div>
+                    <input type="file" id="fotoInput" name="comprobante"
+                           accept="image/*"
+                           style="display:none;" onchange="handleFotoChange(this)">
+                </div>
+                <div class="foto-opcional">📎 Opcional — podés agregarlo después desde el historial</div>
             </div>
 
             {{-- Selector cliente --}}
@@ -517,12 +589,18 @@ function seleccionarPago(metodo) {
     });
     const wrapper = document.getElementById('clienteWrapper');
     wrapper.classList.toggle('show', metodo === 'fiado');
+
+    // Mostrar zona de foto solo para transferencia
+    document.getElementById('transferFotoWrap').classList.toggle('show', metodo === 'transferencia');
+
     if (metodo !== 'fiado') {
-        // Limpiar estado del panel fiado al cambiar método
         document.getElementById('cuentaGenericaHint').classList.remove('show');
         document.getElementById('nuevoClienteForm').classList.remove('show');
         document.getElementById('nuevoClienteNombre').value = '';
         document.getElementById('clienteSelect').value = '';
+    }
+    if (metodo !== 'transferencia') {
+        removeFoto(null); // limpiar foto si cambia de método
     }
 }
 
@@ -615,7 +693,35 @@ function confirmarVenta() {
     const btn = document.getElementById('btnConfirmar');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando…';
-    document.getElementById('ventaForm').submit();
+
+    // ── Usar FormData para incluir el file input que está fuera del form ──
+    const form     = document.getElementById('ventaForm');
+    const formData = new FormData(form);
+
+    // Adjuntar foto si hay una seleccionada
+    const fotoInput = document.getElementById('fotoInput');
+    if (fotoInput && fotoInput.files.length > 0) {
+        formData.append('comprobante', fotoInput.files[0]);
+    }
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        if (data.redirect) {
+            window.location.href = data.redirect;
+        } else {
+            throw new Error('Sin redirect');
+        }
+    })
+    .catch(() => {
+        toast('❌ Error al procesar la venta. Intentá de nuevo.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Confirmar venta';
+    });
 }
 
 // ── Limpiar ───────────────────────────────────────────────────
@@ -635,6 +741,56 @@ function abrirCarrito() {
     if (window.innerWidth >= 992) return;
     cartOpen = true;
     document.getElementById('cartPanel').classList.add('open');
+}
+
+// ── Foto de comprobante ───────────────────────────────────────
+// En móvil: capture="environment" abre la cámara trasera directamente
+// En desktop: sin capture, abre el explorador de archivos normal
+const esMobil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+if (esMobil) {
+    const fi = document.getElementById('fotoInput');
+    if (fi) fi.setAttribute('capture', 'environment');
+}
+function handleFotoChange(input) {
+    if (input.files && input.files[0]) showFoto(input.files[0]);
+}
+
+function handleFotoDrop(e) {
+    e.preventDefault();
+    document.getElementById('fotoDropZone').classList.remove('drag-over');
+    const file = e.dataTransfer?.files[0];
+    if (file && file.type.startsWith('image/')) {
+        // Asignar al input real
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById('fotoInput').files = dt.files;
+        showFoto(file);
+    }
+}
+
+function showFoto(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('fotoPreview');
+        const placeholder = document.getElementById('fotoPlaceholder');
+        const remove = document.getElementById('fotoRemove');
+        preview.src = e.target.result;
+        preview.classList.add('show');
+        placeholder.style.display = 'none';
+        remove.classList.add('show');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeFoto(e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    document.getElementById('fotoInput').value = '';
+    const preview = document.getElementById('fotoPreview');
+    const placeholder = document.getElementById('fotoPlaceholder');
+    const remove = document.getElementById('fotoRemove');
+    if (preview)     { preview.src = ''; preview.classList.remove('show'); }
+    if (placeholder) { placeholder.style.display = ''; }
+    if (remove)      { remove.classList.remove('show'); }
 }
 
 // ── Búsqueda ──────────────────────────────────────────────────

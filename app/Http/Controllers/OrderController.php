@@ -157,7 +157,14 @@ class OrderController extends Controller
             }
         });
 
-        return redirect()->route('pos.index')
+        $redirectUrl = route('pos.index');
+
+        // FormData fetch desde móvil (X-Requested-With: XMLHttpRequest)
+        if (request()->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['redirect' => $redirectUrl]);
+        }
+
+        return redirect($redirectUrl)
             ->with('success', '✅ Venta registrada correctamente.');
     }
 
@@ -169,6 +176,30 @@ class OrderController extends Controller
         $order->load(['user', 'customer', 'items.product']);
         $customers = Customer::orderBy('nombre')->get();
         return view('orders.show', compact('order', 'customers'));
+    }
+
+    /**
+     * Subir o reemplazar comprobante de transferencia desde el historial
+     */
+    public function subirComprobante(Request $request, Order $order)
+    {
+        if ($order->metodo_pago !== 'transferencia') {
+            return back()->with('error', 'Solo se puede subir comprobante en ventas por transferencia.');
+        }
+
+        $request->validate([
+            'comprobante' => 'required|image|max:5120', // 5MB
+        ]);
+
+        // Borrar el anterior si existe
+        if ($order->comprobante_path) {
+            Storage::disk('public')->delete($order->comprobante_path);
+        }
+
+        $path = $request->file('comprobante')->store('comprobantes', 'public');
+        $order->update(['comprobante_path' => $path]);
+
+        return back()->with('success', '✅ Comprobante guardado correctamente.');
     }
 
     /**

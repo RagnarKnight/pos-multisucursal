@@ -32,7 +32,8 @@ Route::middleware(['auth'])->group(function () {
     // ── Historial ─────────────────────────────────────────────────
     Route::get('/historial',           [OrderController::class, 'index'])->name('orders.index');
     Route::get('/historial/{order}',   [OrderController::class, 'show'])->name('orders.show');
-    Route::patch('/historial/{order}', [OrderController::class, 'update'])->name('orders.update');
+    Route::patch('/historial/{order}',            [OrderController::class, 'update'])->name('orders.update');
+    Route::patch('/historial/{order}/comprobante', [OrderController::class, 'subirComprobante'])->name('orders.comprobante');
 
     // ── Clientes (La Libreta) ─────────────────────────────────────
     Route::resource('customers', CustomerController::class);

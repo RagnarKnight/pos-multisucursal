@@ -33,6 +33,14 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // ── Registrar sesión activa para control de sesión única ──
+        $sessionId = $request->session()->getId();
+        \Illuminate\Support\Facades\Cache::put(
+            'session_activa_' . auth()->id(),
+            $sessionId,
+            now()->addDays(7)
+        );
+
         // Superadmin → dashboard | resto → POS
         return auth()->user()->esSuperAdmin()
             ? redirect()->route('dashboard')
@@ -41,6 +49,11 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        // ── Limpiar sesión registrada en caché al hacer logout ──
+        if (auth()->check()) {
+            \Illuminate\Support\Facades\Cache::forget('session_activa_' . auth()->id());
+        }
+
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

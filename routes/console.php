@@ -1,11 +1,15 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
-// Backup automático todos los días a las 23:00
-Schedule::command('db:backup')->dailyAt('23:00');
+// ── Backup completo: DB + imágenes ─────────────────────────────
+// Mediodía: durante el turno, por si algo pasa
+Schedule::command('backup:full')->dailyAt('12:00');
 
-// También al mediodía para mayor seguridad
-Schedule::command('db:backup')->dailyAt('12:00');
+// Cierre del día: el más importante
+Schedule::command('backup:full')->dailyAt('23:00');
+
+// ── Comandos manuales disponibles ─────────────────────────────
+// Solo DB:      php artisan backup:full --solo-db
+// Solo imágenes: php artisan backup:full --solo-imgs
+// Completo:     php artisan backup:full

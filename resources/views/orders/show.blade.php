@@ -263,12 +263,78 @@
     @endif
 
     {{-- Comprobante transferencia --}}
-    @if($order->comprobante_path)
-    <div class="comprobante-card">
-        <div style="font-size:0.75rem; color:#3498db; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.75rem;">
-            <i class="bi bi-image"></i> Comprobante de transferencia
+    @if($order->metodo_pago === 'transferencia')
+    <div class="comprobante-card" id="comprobanteCard">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
+            <div style="font-size:0.75rem;color:#3498db;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">
+                <i class="bi bi-image"></i> Comprobante de transferencia
+            </div>
+                {{-- Cualquier usuario logueado puede subir/reemplazar su comprobante --}}
+            <button type="button" onclick="toggleUploadForm()"
+                    style="background:none;border:1px solid rgba(52,152,219,0.4);color:#3498db;border-radius:7px;font-size:0.75rem;padding:0.2rem 0.55rem;cursor:pointer;display:flex;align-items:center;gap:0.3rem;">
+                <i class="bi bi-{{ $order->comprobante_path ? 'arrow-repeat' : 'upload' }}"></i>
+                {{ $order->comprobante_path ? 'Reemplazar foto' : 'Subir comprobante' }}
+            </button>
         </div>
-        <img src="{{ Storage::url($order->comprobante_path) }}" alt="Comprobante">
+
+        {{-- Imagen actual --}}
+        @if($order->comprobante_path)
+        <img src="{{ Storage::url($order->comprobante_path) }}" alt="Comprobante"
+             id="comprobanteImg"
+             style="width:100%;max-height:300px;object-fit:contain;border-radius:8px;background:var(--c-bg);cursor:pointer;"
+             onclick="this.style.maxHeight = this.style.maxHeight === 'none' ? '300px' : 'none'">
+        <div style="font-size:0.7rem;color:var(--c-muted);text-align:center;margin-top:0.3rem;">
+            Tocá la imagen para ampliar
+        </div>
+        @else
+        <div style="text-align:center;padding:1.5rem 0;color:var(--c-muted);">
+            <i class="bi bi-image" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.4;"></i>
+            Sin comprobante adjunto
+        </div>
+        @endif
+
+        {{-- Formulario de upload (oculto por defecto) --}}
+        <div id="uploadForm" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(52,152,219,0.2);">
+            <form method="POST" action="{{ route('orders.comprobante', $order) }}"
+                  enctype="multipart/form-data" id="comprobanteForm">
+                @csrf @method('PATCH')
+
+                {{-- Drop zone --}}
+                <div id="uploadDropZone"
+                     style="border:2px dashed rgba(52,152,219,0.4);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:all 0.15s;background:rgba(52,152,219,0.03);"
+                     onclick="document.getElementById('comprobanteFileInput').click()"
+                     ondragover="event.preventDefault();this.style.borderColor='#3498db';this.style.background='rgba(52,152,219,0.08)'"
+                     ondragleave="this.style.borderColor='rgba(52,152,219,0.4)';this.style.background='rgba(52,152,219,0.03)'">
+
+                    <img id="uploadPreview" src="" alt=""
+                         style="display:none;max-height:120px;max-width:100%;object-fit:contain;border-radius:6px;margin-bottom:0.5rem;">
+
+                    <div id="uploadPlaceholder">
+                        <i class="bi bi-camera" style="font-size:1.6rem;color:#3498db;display:block;margin-bottom:0.3rem;"></i>
+                        <div style="font-size:0.82rem;color:var(--c-muted);">Tocá para sacar foto o elegir imagen</div>
+                        <div style="font-size:0.72rem;color:var(--c-muted);margin-top:0.2rem;">JPG, PNG — máx 5MB</div>
+                    </div>
+
+                    <input type="file" id="comprobanteFileInput" name="comprobante"
+                           accept="image/*"
+                           style="display:none;" onchange="previewComprobante(this)">
+                </div>
+
+                <div style="display:flex;gap:0.5rem;margin-top:0.6rem;">
+                    <button type="submit" id="btnSubirComprobante"
+                            class="btn-accent" disabled
+                            style="border-radius:8px;padding:0.5rem 1rem;font-size:0.88rem;opacity:0.5;flex:1;">
+                        <i class="bi bi-check-lg"></i> Guardar comprobante
+                    </button>
+                    <button type="button" onclick="toggleUploadForm()"
+                            style="background:none;border:1px solid var(--c-border);color:var(--c-muted);border-radius:8px;padding:0.5rem 0.75rem;cursor:pointer;font-size:0.88rem;">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+
     </div>
     @endif
 
@@ -304,7 +370,7 @@
     {{-- Pie solo visible al imprimir --}}
     <div class="print-footer">
         Orden #{{ $order->id }} · {{ $order->created_at->format('d/m/Y H:i') }} · {{ $order->user->name }}<br>
-        POS {{ config('app.name') }}
+        POS Barrio Santa Fe
     </div>
 
     {{-- Acciones --}}
@@ -330,6 +396,35 @@
 <script>
 function toggleEditarCliente() {
     document.getElementById('editarClienteForm').classList.toggle('show');
+}
+
+// ── Upload de comprobante desde historial ─────────────────────
+// En móvil abre la cámara, en desktop el explorador de archivos
+const esMobil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+if (esMobil) {
+    const fi = document.getElementById('comprobanteFileInput');
+    if (fi) fi.setAttribute('capture', 'environment');
+}
+function toggleUploadForm() {
+    const form = document.getElementById('uploadForm');
+    const showing = form.style.display === 'none' || !form.style.display;
+    form.style.display = showing ? 'block' : 'none';
+}
+
+function previewComprobante(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('uploadPreview');
+        const placeholder = document.getElementById('uploadPlaceholder');
+        const btn = document.getElementById('btnSubirComprobante');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    };
+    reader.readAsDataURL(input.files[0]);
 }
 </script>
 @endsection

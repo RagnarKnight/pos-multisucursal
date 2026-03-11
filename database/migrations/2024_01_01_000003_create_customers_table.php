@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('telefono')->nullable();
             $table->decimal('saldo_deudor', 10, 2)->default(0);
             $table->text('notas')->nullable();
+            $table->boolean('activo')->default(true);
             $table->timestamps();
         });
     }
