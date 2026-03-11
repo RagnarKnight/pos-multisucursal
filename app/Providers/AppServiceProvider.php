@@ -19,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
         // ALLOW_TIENDA_MANAGEMENT=true → el cliente puede crear/eliminar tiendas
         // ALLOW_TIENDA_MANAGEMENT=false (default) → solo vos creás tiendas via seeder/tinker
         Gate::define('gestionar-tiendas', fn($u) =>
-            $u->rol === 'superadmin' && config('app.allow_tienda_management', false)
+            $u->rol === 'superadmin' && config('variables.multi_tienda', false)
         );
 
         // Editar configuración de UNA tienda: admin de esa tienda o superadmin

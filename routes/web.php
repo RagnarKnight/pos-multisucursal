@@ -1,4 +1,5 @@
 <?php
+
 use App\Http\Controllers\CajaController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
@@ -20,7 +21,9 @@ Route::get('/', function () {
 Route::middleware(['auth'])->group(function () {
 
     // ── Dashboard superadmin ──────────────────────────────────────
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('can:superadmin');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+         ->name('dashboard')
+         ->middleware('can:superadmin');
 
     // ── POS ───────────────────────────────────────────────────────
     Route::get('/pos',        [OrderController::class, 'create'])->name('pos.index');
@@ -69,6 +72,8 @@ Route::middleware(['auth'])->group(function () {
     // ── Admin: usuarios y productos ───────────────────────────────
     Route::middleware('can:admin')->group(function () {
         Route::resource('users', UserController::class);
+        Route::patch('/users/{user}/toggle-activo', [UserController::class, 'toggleActivo'])
+             ->name('users.toggle-activo');
         Route::patch('/products/{product}', [ProductController::class, 'update'])
              ->name('products.update.precio');
         Route::resource('products', ProductController::class)->except(['update']);

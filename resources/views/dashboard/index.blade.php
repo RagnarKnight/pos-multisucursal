@@ -120,7 +120,7 @@
 {{-- Header ─────────────────────────────────────────────────────── --}}
 <div class="dash-header">
     <div>
-        <div class="dash-title">📊 Dashboard <span>Super Admin</span></div>
+        <div class="dash-title">📊 Resumen del negocio <span>Administrador</span></div>
         <div class="dash-date">
             <i class="bi bi-calendar3"></i>
             {{ now()->isoFormat('dddd D [de] MMMM [de] YYYY') }}

@@ -10,28 +10,19 @@ use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
-    // ── Reglas de visibilidad ──────────────────────────────────────
-    // superadmin: ve todos los usuarios de todas las tiendas
-    // admin:      ve solo usuarios de su tienda
-    // empleado:   sin acceso (ruta protegida con can:admin)
-
     public function index()
     {
         $yo = auth()->user();
 
         if ($yo->esSuperAdmin()) {
-            // Agrupa por tienda para mejor lectura
-            $users = User::with('tienda')
+            $users   = User::with('tienda')
                 ->orderByRaw("CASE rol WHEN 'superadmin' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END")
-                ->orderBy('name')
-                ->get();
+                ->orderBy('name')->get();
             $tiendas = Tienda::where('activa', true)->get();
         } else {
-            // Admin: solo usuarios de su tienda
-            $users = User::where('tienda_id', $yo->tienda_id)
+            $users   = User::where('tienda_id', $yo->tienda_id)
                 ->orderByRaw("CASE rol WHEN 'admin' THEN 0 ELSE 1 END")
-                ->orderBy('name')
-                ->get();
+                ->orderBy('name')->get();
             $tiendas = collect([$yo->tienda]);
         }
 
@@ -45,45 +36,32 @@ class UserController extends Controller
             ? Tienda::where('activa', true)->orderBy('nombre')->get()
             : collect([$yo->tienda]);
 
-        // Roles que puede crear según quien está logueado
         $rolesDisponibles = $yo->esSuperAdmin()
             ? ['superadmin', 'admin', 'empleado']
-            : ['admin', 'empleado'];   // admin solo crea admin/empleado de su tienda
+            : ['admin', 'empleado'];
 
         return view('users.create', compact('tiendas', 'rolesDisponibles'));
     }
 
     public function store(Request $request)
     {
-        $yo = auth()->user();
-
-        // Roles válidos según quién crea
-        $rolesValidos = $yo->esSuperAdmin()
-            ? 'in:superadmin,admin,empleado'
-            : 'in:admin,empleado';
+        $yo           = auth()->user();
+        $rolesValidos = $yo->esSuperAdmin() ? 'in:superadmin,admin,empleado' : 'in:admin,empleado';
 
         $request->validate([
             'name'      => 'required|string|max:100',
             'email'     => 'required|email|unique:users,email',
             'password'  => ['required', 'confirmed', Password::min(8)],
             'rol'       => ['required', $rolesValidos],
-            'tienda_id' => 'required|exists:tiendas,id',
-
+            'tienda_id' => 'nullable|exists:tiendas,id',
         ]);
 
-        // superadmin no tiene tienda_id
-        // admin/empleado: si es superadmin quien crea, usa lo del form; si es admin, su propia tienda
         $tiendaId = null;
         if ($request->rol !== 'superadmin') {
-            $tiendaId = $yo->esSuperAdmin()
-                ? $request->tienda_id
-                : $yo->tienda_id;
+            $tiendaId = $yo->esSuperAdmin() ? $request->tienda_id : $yo->tienda_id;
         }
 
-        // Admin no puede asignar usuarios a otra tienda
-        if (!$yo->esSuperAdmin() && $tiendaId !== $yo->tienda_id) {
-            abort(403);
-        }
+        if (!$yo->esSuperAdmin() && $tiendaId !== $yo->tienda_id) abort(403);
 
         User::create([
             'name'      => $request->name,
@@ -91,6 +69,7 @@ class UserController extends Controller
             'password'  => Hash::make($request->password),
             'rol'       => $request->rol,
             'tienda_id' => $tiendaId,
+            'activo'    => true,
         ]);
 
         return redirect()->route('users.index')
@@ -100,15 +79,8 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $yo = auth()->user();
-
-        // Admin solo edita usuarios de su tienda
-        if (!$yo->esSuperAdmin() && $user->tienda_id !== $yo->tienda_id) {
-            abort(403);
-        }
-        // Nadie puede editar a un superadmin salvo otro superadmin
-        if ($user->esSuperAdmin() && !$yo->esSuperAdmin()) {
-            abort(403);
-        }
+        if (!$yo->esSuperAdmin() && $user->tienda_id !== $yo->tienda_id) abort(403);
+        if ($user->esSuperAdmin() && !$yo->esSuperAdmin()) abort(403);
 
         $tiendas = $yo->esSuperAdmin()
             ? Tienda::where('activa', true)->orderBy('nombre')->get()
@@ -124,13 +96,10 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $yo = auth()->user();
-
         if (!$yo->esSuperAdmin() && $user->tienda_id !== $yo->tienda_id) abort(403);
         if ($user->esSuperAdmin() && !$yo->esSuperAdmin()) abort(403);
 
-        $rolesValidos = $yo->esSuperAdmin()
-            ? 'in:superadmin,admin,empleado'
-            : 'in:admin,empleado';
+        $rolesValidos = $yo->esSuperAdmin() ? 'in:superadmin,admin,empleado' : 'in:admin,empleado';
 
         $request->validate([
             'name'      => 'required|string|max:100',
@@ -140,7 +109,7 @@ class UserController extends Controller
             'password'  => ['nullable', 'confirmed', Password::min(8)],
         ]);
 
-        $tiendaId = $user->tienda_id; // por defecto no cambia
+        $tiendaId = $user->tienda_id;
         if ($yo->esSuperAdmin()) {
             $tiendaId = $request->rol === 'superadmin' ? null : $request->tienda_id;
         }
@@ -162,6 +131,24 @@ class UserController extends Controller
             ->with('success', "✅ Usuario \"{$user->name}\" actualizado.");
     }
 
+    // ── Activar / Desactivar (toggle) ─────────────────────────────
+    public function toggleActivo(User $user)
+    {
+        $yo = auth()->user();
+
+        if ($user->id === $yo->id) {
+            return back()->with('error', 'No podés desactivarte a vos mismo.');
+        }
+        if (!$yo->esSuperAdmin() && $user->tienda_id !== $yo->tienda_id) abort(403);
+        if ($user->esSuperAdmin() && !$yo->esSuperAdmin()) abort(403);
+
+        $user->update(['activo' => !$user->activo]);
+
+        $estado = $user->activo ? 'activado' : 'desactivado';
+        return back()->with('success', "✅ Usuario \"{$user->name}\" {$estado}.");
+    }
+
+    // ── Eliminar — solo si NO tiene ventas ────────────────────────
     public function destroy(User $user)
     {
         $yo = auth()->user();
@@ -171,6 +158,13 @@ class UserController extends Controller
         }
         if (!$yo->esSuperAdmin() && $user->tienda_id !== $yo->tienda_id) abort(403);
         if ($user->esSuperAdmin() && !$yo->esSuperAdmin()) abort(403);
+
+        // Verificar si tiene órdenes asociadas
+        if ($user->orders()->exists()) {
+            return back()->with('error',
+                "⚠️ \"{$user->name}\" tiene ventas registradas y no puede eliminarse. Podés desactivarlo para que no pueda iniciar sesión."
+            );
+        }
 
         $nombre = $user->name;
         $user->delete();

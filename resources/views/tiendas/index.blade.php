@@ -48,7 +48,7 @@
 
 @section('content')
 
-<div class="page-header">
+<div class="page-header" style="margin-bottom:10px;" >
     <div class="page-title">🏪 <span>Tiendas</span></div>
     @can('gestionar-tiendas')
     <a href="{{ route('tiendas.create') }}" class="btn-accent"

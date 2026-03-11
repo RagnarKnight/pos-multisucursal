@@ -353,7 +353,7 @@
             <div class="sidebar-label">Sistema</div>
             <a href="{{ route('dashboard') }}"
                class="sidebar-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-speedometer2"></i> Resumen del negocio
             </a>
             @endif
 

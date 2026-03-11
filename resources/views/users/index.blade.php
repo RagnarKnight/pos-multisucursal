@@ -44,6 +44,15 @@
 .action-btn { background:none;border:1.5px solid var(--c-border);color:var(--c-muted);border-radius:8px;padding:.3rem .5rem;cursor:pointer;font-size:.88rem;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center; }
 .action-btn:hover        { color:var(--c-accent);border-color:var(--c-accent); }
 .action-btn.danger:hover { color:#e84040;border-color:#e84040; }
+
+/* Toggle activo */
+.btn-desactivar:hover { color:var(--c-accent);border-color:var(--c-accent); }
+.btn-activar          { border-color:rgba(46,204,113,.4);color:#2ecc71; }
+.btn-activar:hover    { background:rgba(46,204,113,.08); }
+
+/* Card inactiva */
+.user-card.inactivo { opacity:.65; border-style:dashed; }
+.user-avatar.apagado { filter: grayscale(1); }
 </style>
 @endsection
 

@@ -33,8 +33,9 @@ class User extends Authenticatable
     public function esSuperAdmin(): bool { return $this->rol === 'superadmin'; }
     public function esAdmin(): bool      { return in_array($this->rol, ['admin', 'superadmin']); }
     public function esEmpleado(): bool   { return $this->rol === 'empleado'; }
+    public function estaActivo(): bool   { return $this->activo; }
 
-    // La tienda activa: superadmin puede cambiar via sesión
+    // ─── Tienda activa ────────────────────────────────────────────
     public function tiendaActiva(): ?Tienda
     {
         if ($this->esSuperAdmin()) {
@@ -47,5 +48,14 @@ class User extends Authenticatable
     public function tiendaActivaId(): ?int
     {
         return $this->tiendaActiva()?->id;
+    }
+
+    // ─── Bloqueo de login para usuarios inactivos ─────────────────
+    // Laravel llama a este método antes de autenticar.
+    // Retornar false impide el login y muestra mensaje de credenciales inválidas.
+    // Para un mensaje personalizado usamos AuthenticateUsers override en el controller.
+    public function getAuthPassword(): string
+    {
+        return $this->password;
     }
 }

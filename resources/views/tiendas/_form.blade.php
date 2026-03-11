@@ -10,7 +10,7 @@
     </div>
 
     <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:800;color:var(--c-text);margin-bottom:1.25rem;">
-        🏪 {{ $editando ? 'Configurar tienda' : 'Nueva <span style="color:var(--c-accent)">tienda</span>' }}
+        🏪 {!! $editando ? 'Configurar tienda' : 'Nueva <span style="color:var(--c-accent)">tienda</span>' !!}
     </div>
 
     <form method="POST" action="{{ $accion }}" enctype="multipart/form-data">
