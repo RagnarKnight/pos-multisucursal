@@ -1,2 +1,0 @@
-- el formulario de crear un usuario la validacion al poner el mail me dice "validation.unique" arreglar
-- en la lista de usuarios agregar a que tienda pertenece
