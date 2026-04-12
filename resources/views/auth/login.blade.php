@@ -275,6 +275,102 @@
             color: var(--c-muted);
             text-align: center;
         }
+
+
+        /* ── Acceso rápido PRO ───────────────────────── */
+
+        .demo-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 16px;
+
+            background: linear-gradient(
+                145deg,
+                rgba(255,255,255,0.02),
+                rgba(255,255,255,0.01)
+            );
+
+            border: 1px solid rgba(255,255,255,0.06);
+
+            backdrop-filter: blur(6px);
+
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.04),
+                0 10px 30px rgba(0,0,0,0.35);
+        }
+
+        .demo-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--c-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Botones */
+        .demo-btn {
+            width: 100%;
+            background: var(--c-bg);
+            border: 1px solid var(--c-border);
+            border-radius: 12px;
+
+            padding: 0.65rem 0.8rem;
+            margin-bottom: 0.4rem;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            font-size: 0.85rem;
+            color: var(--c-text);
+
+            cursor: pointer;
+
+            transition:
+                transform 0.12s ease,
+                border-color 0.2s,
+                background 0.2s,
+                box-shadow 0.2s;
+        }
+
+        /* Hover PRO */
+        .demo-btn:hover {
+            border-color: var(--c-accent);
+            background: rgba(245,166,35,0.05);
+
+            transform: translateY(-1px);
+
+            box-shadow: 0 4px 12px rgba(245,166,35,0.15);
+        }
+
+        /* Click */
+        .demo-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Email */
+        .demo-email {
+            font-size: 0.7rem;
+            color: var(--c-muted);
+        }
+
+        /* Badge rol */
+        .demo-role {
+            font-weight: 600;
+        }
+
+        /* Glow por rol */
+        .demo-btn[data-role="super"]:hover {
+            box-shadow: 0 4px 14px rgba(245,166,35,0.35);
+        }
+        .demo-btn[data-role="admin"]:hover {
+            box-shadow: 0 4px 14px rgba(79,70,229,0.35);
+        }
+        .demo-btn[data-role="empleado"]:hover {
+            box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+        }
+
+
     </style>
 </head>
 <body>
@@ -353,9 +449,32 @@
                 <i class="bi bi-box-arrow-in-right"></i> ENTRAR
             </button>
         </form>
+
+        {{-- 🔥 Acceso rápido --}}
+        <div class="demo-box">
+            <div class="demo-title">Acceso rápido</div>
+
+            @foreach([
+                ['super@sistema.local', '⭐ Super Admin', 'super1234', 'super'],
+                ['admin@minegocio.local', '🔵 Admin', 'admin1234', 'admin'],
+                ['empleado@minegocio.local', '🟢 Empleado', 'empleado1234', 'empleado'],
+            ] as [$email, $label, $password, $role])
+
+            <button type="button"
+                    class="demo-btn"
+                    data-role="{{ $role }}"
+                    onclick="fillLogin('{{ $email }}', '{{ $password }}')">
+
+                <span class="demo-role">{{ $label }}</span>
+
+                <span class="demo-email">{{ $email }}</span>
+            </button>
+
+            @endforeach
+        </div>
     </div>
 
-    {{-- Banner instalación PWA — Android/Chrome --}}
+    {{-- Banner instalación PWA --}}
     <div class="pwa-banner" id="pwaBanner">
         <div class="pwa-banner-icon">📲</div>
         <div class="pwa-banner-text">
@@ -365,7 +484,7 @@
         <button class="pwa-banner-btn" id="pwaBannerBtn">Instalar</button>
     </div>
 
-    {{-- Hint iOS (Safari no soporta el evento beforeinstallprompt) --}}
+    {{-- Hint iOS --}}
     <div class="ios-hint" id="iosHint">
         📲 Para instalar en iPhone: tocá <strong>Compartir</strong>
         <i class="bi bi-box-arrow-up"></i> y luego
@@ -378,7 +497,16 @@
 
 </div>
 
+{{-- 🔥 SCRIPT --}}
 <script>
+
+function fillLogin(email, password) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = password;
+
+    // 🚀 Auto login
+    document.getElementById('loginForm').submit();
+}
 // ── Toggle contraseña ──────────────────────────────────────────
 function togglePwd() {
     const input = document.getElementById('password');
